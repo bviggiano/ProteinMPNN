@@ -515,6 +515,91 @@ def test_model_reusability():
     print(f"  - Same seeds produce identical results")
 
 
+@pytest.mark.inference
+def test_pdb_string_vs_file():
+    """Test that PDB string content produces identical results to PDB file"""
+    from protein_mpnn import ProteinMPNN
+
+    test_pdb = 'inputs/PDB_monomers/pdbs/6MRR.pdb'
+    seed = 42
+    num_seq_per_target = 2
+    batch_size = 1
+    sampling_temp = "0.1"
+
+    # Load PDB file content as string
+    with open(test_pdb, 'r') as f:
+        pdb_content = f.read()
+
+    # Create model
+    model = ProteinMPNN(
+        model_name='v_48_020',
+        suppress_print=True
+    )
+
+    # Test with file path
+    results_file = model.sample(
+        pdb_path_or_str=test_pdb,
+        num_seq_per_target=num_seq_per_target,
+        batch_size=batch_size,
+        sampling_temp=sampling_temp,
+        seed=seed
+    )
+
+    # Test with string content
+    results_string = model.sample(
+        pdb_path_or_str=pdb_content,
+        num_seq_per_target=num_seq_per_target,
+        batch_size=batch_size,
+        sampling_temp=sampling_temp,
+        seed=seed
+    )
+
+    # Get results from both
+    protein_name_file = list(results_file.keys())[0]
+    protein_name_string = list(results_string.keys())[0]
+
+    file_data = results_file[protein_name_file]
+    string_data = results_string[protein_name_string]
+
+    # Compare native sequences
+    assert file_data['native_sequence'] == string_data['native_sequence'], \
+        f"Native sequences don't match:\nFile: {file_data['native_sequence']}\nString: {string_data['native_sequence']}"
+
+    # Compare generated sequences
+    assert len(file_data['sequences']) == len(string_data['sequences']), \
+        f"Number of sequences don't match: {len(file_data['sequences'])} vs {len(string_data['sequences'])}"
+
+    for i, (file_seq, string_seq) in enumerate(zip(file_data['sequences'], string_data['sequences'])):
+        assert file_seq == string_seq, \
+            f"Sequence {i} doesn't match:\nFile: {file_seq}\nString: {string_seq}"
+
+    # Compare scores
+    np.testing.assert_allclose(
+        file_data['scores'],
+        string_data['scores'],
+        rtol=1e-5,
+        err_msg="Scores don't match between file and string input"
+    )
+
+    np.testing.assert_allclose(
+        file_data['global_scores'],
+        string_data['global_scores'],
+        rtol=1e-5,
+        err_msg="Global scores don't match between file and string input"
+    )
+
+    # Compare chain assignments
+    assert file_data['designed_chains'] == string_data['designed_chains'], \
+        "Designed chains don't match"
+    assert file_data['fixed_chains'] == string_data['fixed_chains'], \
+        "Fixed chains don't match"
+
+    print(f"\n✓ PDB string vs file test passed")
+    print(f"  - Both inputs produced identical results")
+    print(f"  - Generated {len(file_data['sequences'])} sequences")
+    print(f"  - All sequences and scores match perfectly")
+
+
 if __name__ == '__main__':
     # Run tests
     test_sample_consistency()
@@ -522,6 +607,7 @@ if __name__ == '__main__':
     test_conditional_probs_consistency()
     test_unconditional_probs_consistency()
     test_model_reusability()
+    test_pdb_string_vs_file()
     print("\n" + "="*50)
     print("All consistency tests passed!")
     print("="*50)

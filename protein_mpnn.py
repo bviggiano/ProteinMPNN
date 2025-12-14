@@ -134,15 +134,23 @@ class ProteinMPNN:
 
     def _load_structure(
         self,
-        pdb_path=None,
+        pdb_path_or_str=None,
         jsonl_path=None,
         pdb_path_chains=None,
         chain_id_dict=None,
         max_length=200000,
     ):
-        """Load structure from PDB or JSONL file."""
-        if pdb_path:
-            pdb_dict_list = parse_PDB(pdb_path, ca_only=self.ca_only)
+        """Load structure from PDB file, PDB string content, or JSONL file.
+
+        Args:
+            pdb_path_or_str: Path to PDB file OR PDB file content as string
+            jsonl_path: Path to JSONL file
+            pdb_path_chains: Space-separated chain IDs to design
+            chain_id_dict: Dictionary specifying designed/fixed chains
+            max_length: Maximum sequence length
+        """
+        if pdb_path_or_str:
+            pdb_dict_list = parse_PDB(pdb_path_or_str, ca_only=self.ca_only)
             dataset = StructureDatasetPDB(pdb_dict_list, truncate=None, max_length=max_length)
             all_chain_list = [
                 item[-1:] for item in list(pdb_dict_list[0]) if item[:9] == "seq_chain"
@@ -165,7 +173,7 @@ class ProteinMPNN:
                 verbose=not self.suppress_print,
             )
         else:
-            raise ValueError("Either pdb_path or jsonl_path must be provided")
+            raise ValueError("Either pdb_path_or_str or jsonl_path must be provided")
 
         return dataset, chain_id_dict
 
@@ -186,7 +194,7 @@ class ProteinMPNN:
 
     def sample(
         self,
-        pdb_path=None,
+        pdb_path_or_str=None,
         jsonl_path=None,
         pdb_path_chains=None,
         num_seq_per_target=1,
@@ -212,7 +220,7 @@ class ProteinMPNN:
         Generate protein sequences for given structure(s).
 
         Args:
-            pdb_path: Path to PDB file
+            pdb_path_or_str: Path to PDB file OR PDB file content as string
             jsonl_path: Path to JSONL file with parsed structures
             pdb_path_chains: Space-separated chain IDs to design (for PDB input)
             num_seq_per_target: Number of sequences to generate per target
@@ -273,7 +281,7 @@ class ProteinMPNN:
 
         # Load structure
         dataset, chain_id_dict = self._load_structure(
-            pdb_path=pdb_path,
+            pdb_path_or_str=pdb_path_or_str,
             jsonl_path=jsonl_path,
             pdb_path_chains=pdb_path_chains,
             chain_id_dict=chain_id_dict,
@@ -501,7 +509,7 @@ class ProteinMPNN:
 
     def score(
         self,
-        pdb_path=None,
+        pdb_path_or_str=None,
         jsonl_path=None,
         pdb_path_chains=None,
         fasta_path=None,
@@ -520,7 +528,7 @@ class ProteinMPNN:
         Score backbone-sequence pairs.
 
         Args:
-            pdb_path: Path to PDB file
+            pdb_path_or_str: Path to PDB file OR PDB file content as string
             jsonl_path: Path to JSONL file with parsed structures
             pdb_path_chains: Space-separated chain IDs to design (for PDB input)
             fasta_path: Path to FASTA file with sequences to score
@@ -572,7 +580,7 @@ class ProteinMPNN:
 
         # Load structure
         dataset, chain_id_dict = self._load_structure(
-            pdb_path=pdb_path,
+            pdb_path_or_str=pdb_path_or_str,
             jsonl_path=jsonl_path,
             pdb_path_chains=pdb_path_chains,
             chain_id_dict=chain_id_dict,
@@ -691,7 +699,7 @@ class ProteinMPNN:
 
     def conditional_probs(
         self,
-        pdb_path=None,
+        pdb_path_or_str=None,
         jsonl_path=None,
         pdb_path_chains=None,
         num_batches=1,
@@ -710,7 +718,7 @@ class ProteinMPNN:
         Calculate conditional probabilities p(s_i | rest of sequence and backbone).
 
         Args:
-            pdb_path: Path to PDB file
+            pdb_path_or_str: Path to PDB file OR PDB file content as string
             jsonl_path: Path to JSONL file with parsed structures
             pdb_path_chains: Space-separated chain IDs to design (for PDB input)
             num_batches: Number of batches
@@ -745,7 +753,7 @@ class ProteinMPNN:
 
         # Load structure
         dataset, chain_id_dict = self._load_structure(
-            pdb_path=pdb_path,
+            pdb_path_or_str=pdb_path_or_str,
             jsonl_path=jsonl_path,
             pdb_path_chains=pdb_path_chains,
             chain_id_dict=chain_id_dict,
@@ -826,7 +834,7 @@ class ProteinMPNN:
 
     def unconditional_probs(
         self,
-        pdb_path=None,
+        pdb_path_or_str=None,
         jsonl_path=None,
         pdb_path_chains=None,
         num_batches=1,
@@ -844,7 +852,7 @@ class ProteinMPNN:
         Calculate sequence unconditional probabilities p(s_i | backbone).
 
         Args:
-            pdb_path: Path to PDB file
+            pdb_path_or_str: Path to PDB file OR PDB file content as string
             jsonl_path: Path to JSONL file with parsed structures
             pdb_path_chains: Space-separated chain IDs to design (for PDB input)
             num_batches: Number of batches
@@ -878,7 +886,7 @@ class ProteinMPNN:
 
         # Load structure
         dataset, chain_id_dict = self._load_structure(
-            pdb_path=pdb_path,
+            pdb_path_or_str=pdb_path_or_str,
             jsonl_path=jsonl_path,
             pdb_path_chains=pdb_path_chains,
             chain_id_dict=chain_id_dict,
