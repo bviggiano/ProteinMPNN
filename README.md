@@ -1,3 +1,19 @@
+# pip installable fork of ProteinMPNN
+This repo is a pip installable fork of ProteinMPNN, to enable easier installation and usage. For the time being, it is an extremely minimal fork: I did not move or change any files, just added the infra required for pip installation. In the future, I may restructure to make things more modular.
+
+
+To install in your python environment, utilize:
+```bash
+pip install "protein_mpnn @ git+https://github.com/bviggiano/ProteinMPNN.git"
+```
+
+You can then import from `protein_mpnn_run` and `protein_mpnn_utils` to use in your own code:
+```python
+from protein_mpnn_run import main
+from protein_mpnn_utils import ProteinMPNN
+```
+
+
 # ProteinMPNN
 ![ProteinMPNN](https://docs.google.com/drawings/d/e/2PACX-1vTtnMBDOq8TpHIctUfGN8Vl32x5ISNcPKlxjcQJF2q70PlaH2uFlj2Ac4s3khnZqG1YxppdMr0iTyk-/pub?w=889&h=358)
 Read [ProteinMPNN paper](https://www.biorxiv.org/content/10.1101/2022.06.03.494563v1).
