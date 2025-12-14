@@ -37,22 +37,16 @@ jobs:
       shell: bash -l {0}
       run: |
         pip install uv
-        # Use regular install (not editable) so files are copied to site-packages
         uv pip install ".[test]"
         echo "Package installed successfully"
-        echo "Installed packages:"
-        pip list
 
-    - name: Verify module installation location
+    - name: Verify installation and weights
       shell: bash -l {0}
       run: |
         echo "Checking where protein_mpnn_run is installed:"
         python -c "import protein_mpnn_run; import os; print(f'Module location: {os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))}')"
-
-    - name: Verify weights were downloaded
-      shell: bash -l {0}
-      run: |
-        echo "Checking for downloaded weights in site-packages:"
+        echo ""
+        echo "Checking for downloaded weights:"
         python -c "
 import protein_mpnn_run
 import os
@@ -60,26 +54,28 @@ module_dir = os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))
 for weight_dir in ['vanilla_model_weights', 'ca_model_weights', 'soluble_model_weights']:
     path = os.path.join(module_dir, weight_dir)
     if os.path.exists(path):
-        files = os.listdir(path)
-        print(f'✓ {weight_dir}: {len(files)} files')
+        files = [f for f in os.listdir(path) if f.endswith('.pt')]
+        print(f'✓ {weight_dir}: {len(files)} weight files')
     else:
         print(f'✗ {weight_dir}: NOT FOUND')
         "
 
-    - name: Rename local weight directories to prevent usage
+    - name: Copy test files and inputs to /tmp
       shell: bash -l {0}
       run: |
-        echo "Renaming local weight directories to ensure pip-installed weights are used..."
-        mv vanilla_model_weights vanilla_model_weights_DISABLED
-        mv ca_model_weights ca_model_weights_DISABLED
-        mv soluble_model_weights soluble_model_weights_DISABLED
-        echo "Local weights disabled - only pip-installed weights available"
-        echo "Verifying module still loads from site-packages:"
-        python -c "import protein_mpnn_run; import os; print(f'Module location: {os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))}')"
+        mkdir -p /tmp/proteinmpnn_test
+        cp -r tests /tmp/proteinmpnn_test/
+        cp -r inputs /tmp/proteinmpnn_test/
+        cp pytest.ini /tmp/proteinmpnn_test/
+        echo "Test files copied to /tmp/proteinmpnn_test"
 
-    - name: Run pytest
+    - name: Run pytest from /tmp (ensures we're using installed package)
       shell: bash -l {0}
       env:
         CI: true
+      working-directory: /tmp/proteinmpnn_test
       run: |
-        pytest tests/ -v --tb=short
+        echo "Running tests from: $(pwd)"
+        echo "This ensures we're testing the installed package, not source files"
+        echo "Skipping inference tests (no GPU in CI)"
+        pytest tests/ -v --tb=short -m "not inference"

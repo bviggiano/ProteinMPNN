@@ -5,8 +5,11 @@ Test suite for ProteinMPNN inference functionality.
 
 import tempfile
 from pathlib import Path
+import pytest
 
 
+@pytest.mark.inference
+@pytest.mark.slow
 def test_simple_inference():
     """Test that ProteinMPNN can run inference on a test PDB file"""
     import protein_mpnn_run
