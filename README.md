@@ -1,17 +1,40 @@
 # pip installable fork of ProteinMPNN
-This repo is a pip installable fork of ProteinMPNN, to enable easier installation and usage. For the time being, it is an extremely minimal fork: I did not move or change any files, just added the infra required for pip installation. In the future, I may restructure to make things more modular.
+This repo is a pip installable fork of ProteinMPNN, to enable easier installation and usage.
 
+## Enhancements over base implementation
+- **Python wrapper class**: Clean API that separates model loading from inference for faster batch processing
+- **PDB string support**: Accept PDB content directly as strings, not just file paths (no disk I/O required)
+- **Comprehensive tests**: pytest suite ensuring consistency between CLI and wrapper implementations
+- **pip installable**: Automated weight downloads during installation
 
-To install in your python environment, utilize:
+## Installation
 ```bash
 pip install "protein_mpnn @ git+https://github.com/bviggiano/ProteinMPNN.git"
 ```
 
-You can then import from `protein_mpnn_run` and `protein_mpnn_utils` to use in your own code:
+## Usage
+
+### Python API (wrapper class)
 ```python
-from protein_mpnn_run import main
-from protein_mpnn_utils import ProteinMPNN
+from protein_mpnn import ProteinMPNN
+
+# Model initialization (load once, reuse for multiple structures)
+model = ProteinMPNN(model_name='v_48_020', device='cuda')
+
+# Sequence generation from file path
+results = model.sample(pdb_path_or_str='protein.pdb', num_seq_per_target=10, sampling_temp='0.1')
+
+# Or from PDB string content (no file I/O)
+with open('protein.pdb', 'r') as f:
+    pdb_content = f.read()
+results = model.sample(pdb_path_or_str=pdb_content, num_seq_per_target=10, sampling_temp='0.1')
+
+# Sequence scoring
+scores = model.score(pdb_path_or_str='protein.pdb', num_batches=10)
 ```
+
+### Command-line interface (original)
+The original CLI is still fully supported and backward compatible.
 
 
 # ProteinMPNN

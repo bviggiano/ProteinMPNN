@@ -109,6 +109,7 @@ setup(
     py_modules=[
         'protein_mpnn_run',
         'protein_mpnn_utils',
+        'protein_mpnn',
     ],
 
     # Include helper scripts as a package
