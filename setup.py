@@ -52,6 +52,14 @@ setup(
         'torch>=1.8.0',
     ],
 
+    # Test dependencies
+    extras_require={
+        'test': [
+            'pytest>=6.0',
+            'pytest-cov',
+        ],
+    },
+
     # Classifiers
     classifiers=[
         'Development Status :: 4 - Beta',
