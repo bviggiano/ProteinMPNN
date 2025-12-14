@@ -92,7 +92,7 @@ class PostDevelopCommand(develop):
         download_weights(this_directory)
 
 setup(
-    name='protein-mpnn',
+    name='protein_mpnn',
     version='1.0.0',
     description='Robust deep learning-based protein sequence design using ProteinMPNN',
     long_description=long_description,
