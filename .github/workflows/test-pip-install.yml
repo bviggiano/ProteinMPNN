@@ -36,7 +36,8 @@ jobs:
     - name: Install package with pip (including test dependencies)
       shell: bash -l {0}
       run: |
-        pip install -e ".[test]"
+        pip install uv
+        uv pip install -e ".[test]"
         echo "Package installed successfully"
         echo "Installed packages:"
         pip list
