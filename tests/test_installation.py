@@ -12,9 +12,11 @@ def test_module_imports():
     """Test that core modules can be imported"""
     import protein_mpnn_utils
     import protein_mpnn_run
+    import helper_scripts
 
     assert protein_mpnn_utils is not None
     assert protein_mpnn_run is not None
+    assert helper_scripts is not None
 
 
 def test_weights_are_from_pip_installation():
