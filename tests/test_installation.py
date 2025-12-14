@@ -13,10 +13,14 @@ def test_module_imports():
     import protein_mpnn_utils
     import protein_mpnn_run
     import helper_scripts
+    import protein_mpnn
 
     assert protein_mpnn_utils is not None
     assert protein_mpnn_run is not None
     assert helper_scripts is not None
+    from protein_mpnn import ProteinMPNN
+
+    assert ProteinMPNN is not None
 
 
 def test_weights_are_from_pip_installation():
