@@ -19,7 +19,7 @@ def test_module_imports():
 
 def test_weights_are_from_pip_installation():
     """Verify that weights are loaded from pip installation, not from repo"""
-    from protein_mpnn import protein_mpnn_run
+    import protein_mpnn_run
 
     # Get the path where protein_mpnn_run is installed
     module_path = os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))
