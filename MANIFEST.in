@@ -2,14 +2,12 @@
 include README.md
 include LICENSE
 
-# Include model weights
-recursive-include vanilla_model_weights *.pt
-recursive-include ca_model_weights *.pt
-recursive-include soluble_model_weights *.pt
-
 # Include examples and helper scripts
 recursive-include examples *
 recursive-include helper_scripts *.py
 
 # Include inputs for testing
 recursive-include inputs *.pdb *.jsonl
+
+# Note: Model weights are downloaded during installation from GitHub
+# See setup.py for download logic

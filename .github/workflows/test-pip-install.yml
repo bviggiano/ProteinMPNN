@@ -49,6 +49,23 @@ jobs:
         echo "Checking where protein_mpnn_run is installed:"
         python -c "import protein_mpnn_run; import os; print(f'Module location: {os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))}')"
 
+    - name: Verify weights were downloaded
+      shell: bash -l {0}
+      run: |
+        echo "Checking for downloaded weights in site-packages:"
+        python -c "
+import protein_mpnn_run
+import os
+module_dir = os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))
+for weight_dir in ['vanilla_model_weights', 'ca_model_weights', 'soluble_model_weights']:
+    path = os.path.join(module_dir, weight_dir)
+    if os.path.exists(path):
+        files = os.listdir(path)
+        print(f'✓ {weight_dir}: {len(files)} files')
+    else:
+        print(f'✗ {weight_dir}: NOT FOUND')
+        "
+
     - name: Rename local weight directories to prevent usage
       shell: bash -l {0}
       run: |
