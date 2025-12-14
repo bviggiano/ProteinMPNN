@@ -1,0 +1,81 @@
+name: Test Pip Installation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-pip-install:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10']
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Conda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: ${{ matrix.python-version }}
+        activate-environment: test-proteinmpnn
+
+    - name: Verify minimal conda environment
+      shell: bash -l {0}
+      run: |
+        echo "Conda environment packages:"
+        conda list
+        echo "Python version:"
+        python --version
+
+    - name: Install package with pip (including test dependencies)
+      shell: bash -l {0}
+      run: |
+        pip install uv
+        uv pip install ".[test]"
+        echo "Package installed successfully"
+
+    - name: Verify installation and weights
+      shell: bash -l {0}
+      run: |
+        echo "Checking where protein_mpnn_run is installed:"
+        python -c "import protein_mpnn_run; import os; print(f'Module location: {os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))}')"
+        echo ""
+        echo "Checking for downloaded weights:"
+        python << 'EOF'
+        import protein_mpnn_run
+        import os
+        module_dir = os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))
+        for weight_dir in ['vanilla_model_weights', 'ca_model_weights', 'soluble_model_weights']:
+            path = os.path.join(module_dir, weight_dir)
+            if os.path.exists(path):
+                files = [f for f in os.listdir(path) if f.endswith('.pt')]
+                print(f'✓ {weight_dir}: {len(files)} weight files')
+            else:
+                print(f'✗ {weight_dir}: NOT FOUND')
+        EOF
+
+    - name: Copy test files and inputs to /tmp
+      shell: bash -l {0}
+      run: |
+        mkdir -p /tmp/proteinmpnn_test
+        cp -r tests /tmp/proteinmpnn_test/
+        cp -r inputs /tmp/proteinmpnn_test/
+        cp pytest.ini /tmp/proteinmpnn_test/
+        echo "Test files copied to /tmp/proteinmpnn_test"
+
+    - name: Run pytest from /tmp (ensures we're using installed package)
+      shell: bash -l {0}
+      env:
+        CI: true
+      working-directory: /tmp/proteinmpnn_test
+      run: |
+        echo "Running tests from: $(pwd)"
+        echo "This ensures we're testing the installed package, not source files"
+        echo "Skipping inference tests (no GPU in CI)"
+        pytest tests/ -v --tb=short -m "not inference"
