@@ -37,10 +37,17 @@ jobs:
       shell: bash -l {0}
       run: |
         pip install uv
-        uv pip install -e ".[test]"
+        # Use regular install (not editable) so files are copied to site-packages
+        uv pip install ".[test]"
         echo "Package installed successfully"
         echo "Installed packages:"
         pip list
+
+    - name: Verify module installation location
+      shell: bash -l {0}
+      run: |
+        echo "Checking where protein_mpnn_run is installed:"
+        python -c "import protein_mpnn_run; import os; print(f'Module location: {os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))}')"
 
     - name: Rename local weight directories to prevent usage
       shell: bash -l {0}
@@ -50,6 +57,8 @@ jobs:
         mv ca_model_weights ca_model_weights_DISABLED
         mv soluble_model_weights soluble_model_weights_DISABLED
         echo "Local weights disabled - only pip-installed weights available"
+        echo "Verifying module still loads from site-packages:"
+        python -c "import protein_mpnn_run; import os; print(f'Module location: {os.path.dirname(os.path.abspath(protein_mpnn_run.__file__))}')"
 
     - name: Run pytest
       shell: bash -l {0}
