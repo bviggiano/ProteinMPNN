@@ -27,8 +27,7 @@ results = model.sample(pdb_path_or_str=pdb_content, num_seq_per_target=10, sampl
 scores = model.score(pdb_path_or_str='protein.pdb', num_batches=10)
 ```
 
-### Command-line interface (original)
-The original CLI is still fully supported and backward compatible.
+All original functionality is fully supported and backward compatible.
 
 
 # ProteinMPNN
