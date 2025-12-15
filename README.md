@@ -1,12 +1,6 @@
 # pip installable fork of ProteinMPNN
 This repo is a pip installable fork of ProteinMPNN, to enable easier installation and usage.
 
-## Enhancements over base implementation
-- **Python wrapper class**: Clean API that separates model loading from inference for faster batch processing
-- **PDB string support**: Accept PDB content directly as strings, not just file paths (no disk I/O required)
-- **Comprehensive tests**: pytest suite ensuring consistency between CLI and wrapper implementations
-- **pip installable**: Automated weight downloads during installation
-
 ## Installation
 ```bash
 pip install "protein_mpnn @ git+https://github.com/bviggiano/ProteinMPNN.git"
