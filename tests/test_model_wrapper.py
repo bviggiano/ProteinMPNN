@@ -565,3 +565,77 @@ def test_pdb_string_vs_file():
     print(f"  - Both inputs produced identical results")
     print(f"  - Generated {len(file_data['sequences'])} sequences")
     print(f"  - All sequences and scores match perfectly")
+
+
+@pytest.mark.inference
+def test_pdb_string_naming():
+    """Test that PDB string input produces predictable 'protein' name"""
+    from protein_mpnn import ProteinMPNN
+
+    test_pdb = "inputs/PDB_monomers/pdbs/6MRR.pdb"
+    seed = 42
+
+    # Load PDB file content as string
+    with open(test_pdb, "r") as f:
+        pdb_content = f.read()
+
+    # Create model
+    model = ProteinMPNN(model_name="v_48_020", suppress_print=True)
+
+    # Test with string content
+    results = model.sample(
+        pdb_path_or_str=pdb_content,
+        num_seq_per_target=2,
+        sampling_temp="0.1",
+        seed=seed,
+    )
+
+    # Verify the protein name is predictable
+    protein_names = list(results.keys())
+    assert len(protein_names) == 1, f"Expected 1 protein, got {len(protein_names)}"
+    assert protein_names[0] == "protein", f"Expected name 'protein', got '{protein_names[0]}'"
+
+    print(f"\n✓ PDB string naming test passed")
+    print(f"  - Protein name is predictable: '{protein_names[0]}'")
+
+
+@pytest.mark.inference
+def test_fixed_positions_with_pdb_string():
+    """Test that fixed_positions_dict works correctly with PDB string input"""
+    from protein_mpnn import ProteinMPNN
+
+    test_pdb = "inputs/PDB_monomers/pdbs/6MRR.pdb"
+    seed = 42
+
+    # Load PDB as string
+    with open(test_pdb, "r") as f:
+        pdb_content = f.read()
+
+    model = ProteinMPNN(model_name="v_48_020", suppress_print=True)
+
+    # Test with fixed positions (keep first 10 residues fixed)
+    # The predictable name "protein" allows us to construct the dict
+    fixed_positions = {"protein": {"A": list(range(1, 11))}}
+
+    results = model.sample(
+        pdb_path_or_str=pdb_content,
+        num_seq_per_target=5,
+        sampling_temp="0.2",
+        fixed_positions_dict=fixed_positions,
+        seed=seed,
+    )
+
+    # Verify results
+    protein_name = list(results.keys())[0]
+    assert protein_name == "protein", f"Structure name should be 'protein', got '{protein_name}'"
+
+    # Verify that fixed positions are actually fixed
+    native_seq = results[protein_name]["native_sequence"]
+    for i, generated_seq in enumerate(results[protein_name]["sequences"]):
+        # First 10 positions should match native
+        assert generated_seq[:10] == native_seq[:10], \
+            f"Sequence {i}: Fixed positions not maintained: {generated_seq[:10]} != {native_seq[:10]}"
+
+    print(f"\n✓ Fixed positions test passed with PDB string input")
+    print(f"  - All {len(results[protein_name]['sequences'])} sequences maintained fixed positions")
+    print(f"  - First 10 residues: {native_seq[:10]}")

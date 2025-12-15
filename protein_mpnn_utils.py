@@ -186,19 +186,28 @@ def parse_PDB(path_to_pdb, input_chain_list=None, ca_only=False):
                     coords_dict_chain['O_chain_' + letter] = xyz[:, 3, :].tolist()
                 my_dict['coords_chain_'+letter]=coords_dict_chain
                 s += 1
-        # Handle name extraction for both file paths and string content
-        if os.path.isfile(biounit):
-            # Extract name from file path
-            fi = biounit.rfind("/")
-            my_dict['name']=biounit[(fi+1):-4]
-        else:
-            # String content - use timestamp-based name
-            my_dict['name'] = f'structure_{int(time.time() * 1000000)}'
         my_dict['num_of_chains'] = s
         my_dict['seq'] = concat_seq
         if s <= len(chain_alphabet):
             pdb_dict_list.append(my_dict)
             c+=1
+
+    # Assign names after all structures are parsed
+    is_file = os.path.isfile(path_to_pdb)
+    for idx, my_dict in enumerate(pdb_dict_list):
+        if is_file:
+            # Extract name from file path
+            fi = path_to_pdb.rfind("/")
+            my_dict['name'] = path_to_pdb[(fi+1):-4]
+        else:
+            # String content - use predictable naming
+            if len(pdb_dict_list) == 1:
+                # Single structure: use simple name
+                my_dict['name'] = 'protein'
+            else:
+                # Multiple structures: use indexed names
+                my_dict['name'] = f'protein_{idx}'
+
     return pdb_dict_list
 
 
