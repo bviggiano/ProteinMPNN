@@ -132,8 +132,9 @@ class ProteinMPNN:
         self.alphabet = "ACDEFGHIKLMNPQRSTVWYX"
         self.alphabet_dict = dict(zip(self.alphabet, range(21)))
 
-    def _load_structure(
+    def _load_structure_and_seq(
         self,
+        prompt_dict=None,
         pdb_path_or_str=None,
         jsonl_path=None,
         pdb_path_chains=None,
@@ -144,6 +145,7 @@ class ProteinMPNN:
 
         Args:
             pdb_path_or_str: Path to PDB file OR PDB file content as string
+            prompt_dict: Dictionary with chain IDs as keys and prompt sequences as values
             jsonl_path: Path to JSONL file
             pdb_path_chains: Space-separated chain IDs to design
             chain_id_dict: Dictionary specifying designed/fixed chains
@@ -151,11 +153,51 @@ class ProteinMPNN:
         """
         if pdb_path_or_str:
             pdb_dict_list = parse_PDB(pdb_path_or_str, ca_only=self.ca_only)
-            dataset = StructureDatasetPDB(pdb_dict_list, truncate=None, max_length=max_length)
+
             all_chain_list = [
                 item[-1:] for item in list(pdb_dict_list[0]) if item[:9] == "seq_chain"
             ]
 
+            # Override sequence information if prompt_dict is provided
+            if prompt_dict is not None:
+                # first check if the chain ids match
+                prompt_chain_list = list(prompt_dict.keys())
+                for chain_id in prompt_chain_list:
+                    if chain_id not in all_chain_list:
+                        raise ValueError(
+                            f"Provided chain ID {chain_id} not found in PDB structure!"
+                        )
+                    
+                    chain_id_key = f"seq_chain_{chain_id}"
+                    prompt_seq = prompt_dict[chain_id]
+
+                    # get sequence to be updated
+                    update_seq = list(pdb_dict_list[0][chain_id_key])
+
+                    # check if length matches
+                    if len(prompt_seq) != len(update_seq):
+                        raise ValueError(
+                            "Length of provided sequence does not match length of structure!"
+                        )
+                    # update sequence
+                    for i, aa in enumerate(prompt_seq):
+                        if aa != "_":
+                            update_seq[i] = aa
+                        
+                    update_seq = "".join(update_seq)
+                    pdb_dict_list[0][f"seq_chain_{chain_id}"] = update_seq
+                
+                # Update overall sequence
+                update_full_seq = ""
+                for chain_id in all_chain_list:
+                    chain_id_key = f"seq_chain_{chain_id}"
+                    chain_seq = pdb_dict_list[0][chain_id_key]
+                    update_full_seq += chain_seq
+
+                pdb_dict_list[0]["seq"] = update_full_seq
+
+            dataset = StructureDatasetPDB(pdb_dict_list, truncate=None, max_length=max_length)
+            
             if pdb_path_chains:
                 designed_chain_list = [str(item) for item in pdb_path_chains.split()]
             else:
@@ -195,6 +237,7 @@ class ProteinMPNN:
     def sample(
         self,
         pdb_path_or_str=None,
+        prompt=None,
         jsonl_path=None,
         pdb_path_chains=None,
         num_seq_per_target=1,
@@ -221,6 +264,7 @@ class ProteinMPNN:
 
         Args:
             pdb_path_or_str: Path to PDB file OR PDB file content as string
+            prompt: dictionary with chain IDs as keys and prompt sequences as values
             jsonl_path: Path to JSONL file with parsed structures
             pdb_path_chains: Space-separated chain IDs to design (for PDB input)
             num_seq_per_target: Number of sequences to generate per target
@@ -279,9 +323,11 @@ class ProteinMPNN:
                 if AA in list(bias_AA_dict.keys()):
                     bias_AAs_np[n] = bias_AA_dict[AA]
 
+
         # Load structure
-        dataset, chain_id_dict = self._load_structure(
+        dataset, chain_id_dict = self._load_structure_and_seq(
             pdb_path_or_str=pdb_path_or_str,
+            prompt_dict=prompt,
             jsonl_path=jsonl_path,
             pdb_path_chains=pdb_path_chains,
             chain_id_dict=chain_id_dict,
@@ -510,6 +556,8 @@ class ProteinMPNN:
     def score(
         self,
         pdb_path_or_str=None,
+        prompt=None,
+        seq_str=None,
         jsonl_path=None,
         pdb_path_chains=None,
         fasta_path=None,
@@ -529,6 +577,7 @@ class ProteinMPNN:
 
         Args:
             pdb_path_or_str: Path to PDB file OR PDB file content as string
+            prompt: dictionary with chain IDs as keys and prompt sequences as values
             jsonl_path: Path to JSONL file with parsed structures
             pdb_path_chains: Space-separated chain IDs to design (for PDB input)
             fasta_path: Path to FASTA file with sequences to score
@@ -579,8 +628,9 @@ class ProteinMPNN:
         np.random.seed(seed)
 
         # Load structure
-        dataset, chain_id_dict = self._load_structure(
+        dataset, chain_id_dict = self._load_structure_and_seq(
             pdb_path_or_str=pdb_path_or_str,
+            prompt_dict=prompt,
             jsonl_path=jsonl_path,
             pdb_path_chains=pdb_path_chains,
             chain_id_dict=chain_id_dict,
@@ -700,6 +750,7 @@ class ProteinMPNN:
     def conditional_probs(
         self,
         pdb_path_or_str=None,
+        prompt=None,
         jsonl_path=None,
         pdb_path_chains=None,
         num_batches=1,
@@ -719,6 +770,7 @@ class ProteinMPNN:
 
         Args:
             pdb_path_or_str: Path to PDB file OR PDB file content as string
+            prompt: dictionary with chain IDs as keys and prompt sequences as values
             jsonl_path: Path to JSONL file with parsed structures
             pdb_path_chains: Space-separated chain IDs to design (for PDB input)
             num_batches: Number of batches
@@ -752,8 +804,9 @@ class ProteinMPNN:
         np.random.seed(seed)
 
         # Load structure
-        dataset, chain_id_dict = self._load_structure(
+        dataset, chain_id_dict = self._load_structure_and_seq(
             pdb_path_or_str=pdb_path_or_str,
+            prompt_dict=prompt,
             jsonl_path=jsonl_path,
             pdb_path_chains=pdb_path_chains,
             chain_id_dict=chain_id_dict,
@@ -835,6 +888,7 @@ class ProteinMPNN:
     def unconditional_probs(
         self,
         pdb_path_or_str=None,
+        prompt=None,
         jsonl_path=None,
         pdb_path_chains=None,
         num_batches=1,
@@ -853,6 +907,7 @@ class ProteinMPNN:
 
         Args:
             pdb_path_or_str: Path to PDB file OR PDB file content as string
+            prompt: dictionary with chain IDs as keys and prompt sequences as values
             jsonl_path: Path to JSONL file with parsed structures
             pdb_path_chains: Space-separated chain IDs to design (for PDB input)
             num_batches: Number of batches
@@ -885,8 +940,9 @@ class ProteinMPNN:
         np.random.seed(seed)
 
         # Load structure
-        dataset, chain_id_dict = self._load_structure(
+        dataset, chain_id_dict = self._load_structure_and_seq(
             pdb_path_or_str=pdb_path_or_str,
+            prompt_dict=prompt,
             jsonl_path=jsonl_path,
             pdb_path_chains=pdb_path_chains,
             chain_id_dict=chain_id_dict,
