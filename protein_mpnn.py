@@ -177,6 +177,24 @@ class ProteinMPNN:
 
         return dataset, chain_id_dict
 
+    def _get_effective_batch_size(self, num_seq_per_target, requested_batch_size):
+        """Calculate the effective batch size based on sequences needed and available memory.
+
+        Args:
+            num_seq_per_target: Number of sequences to generate
+            requested_batch_size: User-requested batch size
+
+        Returns:
+            Effective batch size (capped by num_seq_per_target and available GPU memory)
+        """
+        effective_batch_size = requested_batch_size
+
+        # Don't use a batch size larger than the number of sequences needed
+        if effective_batch_size > num_seq_per_target:
+            effective_batch_size = num_seq_per_target
+
+        return effective_batch_size
+
     def to_device(self, device):
         """Move model to specified device.
 
@@ -223,9 +241,12 @@ class ProteinMPNN:
             pdb_path_or_str: Path to PDB file OR PDB file content as string
             jsonl_path: Path to JSONL file with parsed structures
             pdb_path_chains: Space-separated chain IDs to design (for PDB input)
-            num_seq_per_target: Number of sequences to generate per target
+            num_seq_per_target: Minimum number of sequences to generate per target per temperature.
+                If not evenly divisible by batch_size, will generate the next multiple
+                (e.g., num_seq_per_target=5 with batch_size=3 generates 6 sequences per temperature)
             batch_size: Batch size for generation
-            sampling_temp: Sampling temperature(s) as string (e.g., "0.1" or "0.1 0.2 0.5")
+            sampling_temp: Sampling temperature(s) as string (e.g., "0.1" or "0.1 0.2 0.5").
+                Generates num_seq_per_target sequences for EACH temperature
             seed: Random seed (if None, will be random)
             chain_id_dict: Dictionary specifying designed/fixed chains
             fixed_positions_dict: Dictionary with fixed positions
@@ -288,8 +309,13 @@ class ProteinMPNN:
             max_length=max_length,
         )
 
-        NUM_BATCHES = num_seq_per_target // batch_size
-        BATCH_COPIES = batch_size
+        # Get effective batch size (capped by num_seq_per_target and available GPU memory)
+        effective_batch_size = self._get_effective_batch_size(num_seq_per_target, batch_size)
+
+        # Calculate number of batches needed (ceiling division to ensure we get enough sequences)
+        # Total sequences generated per temperature = NUM_BATCHES * BATCH_COPIES
+        NUM_BATCHES = (num_seq_per_target + effective_batch_size - 1) // effective_batch_size
+        BATCH_COPIES = effective_batch_size
 
         # Update model's backbone noise
         self.model.augment_eps = backbone_noise
