@@ -283,16 +283,19 @@ def main():
         results.append(result)
 
     # Save results
-    output_file = Path(args.output)
+    test_dir = Path(__file__).parent
+    output_file = test_dir / Path(args.output)
     if args.baseline:
-        test_dir = Path(__file__).parent
         output_file = test_dir / 'baseline_results.json'
 
     save_results(results, output_file)
 
     # Compare with baseline if requested
     if args.compare:
-        compare_results(Path(args.compare), results)
+        compare_file = args.compare
+        if not Path(compare_file).exists():
+            compare_file = test_dir / compare_file
+        compare_results(compare_file, results)
 
     # Print summary
     print(f"\n{'='*60}")
