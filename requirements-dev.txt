@@ -1,0 +1,18 @@
+# Development and testing dependencies for ProteinMPNN
+
+# Core testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Performance testing
+pytest-benchmark>=4.0.0
+py-spy>=0.3.14
+line-profiler>=4.0.0
+memory-profiler>=0.61.0
+
+# Profiling visualization
+snakeviz>=2.1.0
+
+# Optional but recommended
+ipython>=8.0.0
+jupyter>=1.0.0

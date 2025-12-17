@@ -7,7 +7,7 @@ This directory contains tests for the ProteinMPNN package.
 ### Install test dependencies
 
 ```bash
-pip install -e ".[test]"
+uv pip install -e ".[test]"
 ```
 
 ### Run all tests
@@ -55,3 +55,75 @@ pytest tests/ --cov=protein_mpnn_utils --cov=protein_mpnn_run
 
 - `inference`: Tests that run actual model inference (skipped in CI)
 - `slow`: Tests that take significant time to run
+- `performance`: Performance benchmarking tests (see below)
+
+---
+
+# Performance Testing
+
+This directory also contains performance benchmarking and profiling tools.
+
+## Quick Start
+
+### Run Performance Tests
+```bash
+# From repo root
+pytest test_performance.py -v -s
+
+# Skip performance tests in regular testing
+pytest -v -m "not performance"
+```
+
+### Run Benchmarks
+```bash
+# Quick benchmark (3 configs, ~10 seconds)
+python tests/benchmark_runner.py --quick
+
+# Standard benchmark (7 configs, ~1 minute)
+python tests/benchmark_runner.py
+
+# Comprehensive benchmark (10 configs, ~2-3 minutes)
+python tests/benchmark_runner.py --comprehensive
+
+# Save as baseline for future comparisons
+python tests/benchmark_runner.py --baseline
+
+# Compare with baseline
+python tests/benchmark_runner.py --compare baseline_results.json
+```
+
+## Performance Test Structure
+
+Tests use **6MRR.pdb** (68 residue protein) located at `inputs/PDB_monomers/pdbs/6MRR.pdb`.
+
+### Test Classes:
+
+1. **TestSingleStructurePerformance** - Baseline measurements
+2. **TestMultipleStructuresPerformance** - Sequential processing (baseline for future batching)
+3. **TestMultipleTemperaturesPerformance** - Multiple sampling temperatures
+4. **TestMemoryProfiler** - GPU memory tracking
+5. **TestDetailedProfiling** - cProfile integration
+
+## Workflow for Optimization
+
+### 1. Establish Baseline
+```bash
+python tests/benchmark_runner.py --baseline
+# Creates baseline_results.json
+```
+
+### 2. Make Optimizations
+Edit code, implement batching, etc.
+
+### 3. Compare Performance
+```bash
+python tests/benchmark_runner.py --compare baseline_results.json
+```
+
+## Advanced Profiling
+
+See [../PERFORMANCE_TESTING.md](../PERFORMANCE_TESTING.md) for detailed profiling with:
+- PyTorch Profiler (CUDA analysis)
+- py-spy (live profiling)
+- line_profiler (line-by-line)
+- Chrome tracing visualization
