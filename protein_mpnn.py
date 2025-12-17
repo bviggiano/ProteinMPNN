@@ -50,6 +50,7 @@ class ProteinMPNN:
         use_soluble_model: Use soluble protein model (default: False)
         device: Device to run on ('cuda' or 'cpu', default: auto-detect)
         suppress_print: Suppress printing (default: False)
+        compile_model: Compile model with torch.compile (default: None = auto-detect, True = force, False = disable)
     """
 
     def __init__(
@@ -60,6 +61,7 @@ class ProteinMPNN:
         use_soluble_model=False,
         device=None,
         suppress_print=False,
+        compile_model=None,
     ):
         self.model_name = model_name
         self.ca_only = ca_only
@@ -122,6 +124,24 @@ class ProteinMPNN:
         self.model.to(self.device)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.eval()
+
+        # Compile model if requested
+        if compile_model is None:
+            # Auto-detect: compile if PyTorch 2.0+ and CUDA
+            compile_model = (
+                hasattr(torch, 'compile') and
+                self.device.type == 'cuda' and
+                torch.cuda.is_available()
+            )
+
+        if compile_model:
+            if not hasattr(torch, 'compile'):
+                if not self.suppress_print:
+                    warnings.warn("torch.compile not available (requires PyTorch 2.0+). Skipping compilation.")
+            else:
+                if not self.suppress_print:
+                    print("Compiling model with torch.compile (first call will be slower)...")
+                self.model = torch.compile(self.model, mode='reduce-overhead')
 
         if not self.suppress_print:
             print(40 * "-")
@@ -191,6 +211,44 @@ class ProteinMPNN:
         self.device = device
         self.model.to(device)
         return self
+
+    def _get_optimal_batch_size(self, num_seq_per_target):
+        """Calculate optimal batch size based on available GPU memory.
+
+        Args:
+            num_seq_per_target: Number of sequences to generate
+
+        Returns:
+            Recommended batch size
+        """
+        if self.device.type != 'cuda' or not torch.cuda.is_available():
+            return 1
+
+        # Get available GPU memory in GB
+        try:
+            total_memory = torch.cuda.get_device_properties(self.device).total_memory / 1e9
+            allocated_memory = torch.cuda.memory_allocated(self.device) / 1e9
+            available_memory = total_memory - allocated_memory
+        except:
+            return 1
+
+        # Conservative batch size selection based on available memory
+        # These are empirically determined for typical protein sequences
+        if available_memory > 20:  # > 20GB available
+            recommended_batch_size = 32
+        elif available_memory > 10:  # > 10GB available
+            recommended_batch_size = 16
+        elif available_memory > 5:  # > 5GB available
+            recommended_batch_size = 8
+        elif available_memory > 2:  # > 2GB available
+            recommended_batch_size = 4
+        else:
+            recommended_batch_size = 1
+
+        # Don't exceed num_seq_per_target
+        recommended_batch_size = min(recommended_batch_size, num_seq_per_target)
+
+        return recommended_batch_size
 
     def sample(
         self,
@@ -262,6 +320,15 @@ class ProteinMPNN:
 
         torch.manual_seed(seed)
         np.random.seed(seed)
+
+        # Smart batch size selection
+        if batch_size == 1 and num_seq_per_target > 1:
+            optimal_batch_size = self._get_optimal_batch_size(num_seq_per_target)
+            if optimal_batch_size > 1:
+                batch_size = optimal_batch_size
+                if not self.suppress_print:
+                    available_mem = torch.cuda.get_device_properties(self.device).total_memory / 1e9 if self.device.type == 'cuda' else 0
+                    print(f"[ProteinMPNN] Auto-selected batch_size={batch_size} based on {available_mem:.1f}GB GPU memory (use batch_size parameter to override)")
 
         # Parse temperatures
         temperatures = [float(item) for item in sampling_temp.split()]
